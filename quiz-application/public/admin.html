@@ -1,0 +1,172 @@
+<!-- public/admin-login.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz Admin Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .login-container {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Admin Login</h2>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter admin password">
+        </div>
+        <button onclick="verifyPassword()">Login</button>
+        <div id="error-message" class="error-message"></div>
+    </div>
+
+    <script>
+        let adminPassword = '';
+
+        async function verifyPassword() {
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+            
+            try {
+                const response = await fetch('/admin/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    adminPassword = password;
+                    loadAdminInterface();
+                } else {
+                    errorMessage.textContent = 'Invalid password';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        function loadAdminInterface() {
+            document.body.innerHTML = `
+                <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+                    <h1>Quiz Admin Panel</h1>
+                    <div class="form-group">
+                        <label>Question:</label><br>
+                        <textarea id="question" rows="3" style="width: 100%; margin-top: 5px;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Options (one per line):</label><br>
+                        <textarea id="options" rows="4" style="width: 100%; margin-top: 5px;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Correct Answer:</label><br>
+                        <select id="correctAnswer" style="width: 100%; margin-top: 5px;"></select>
+                    </div>
+                    <button onclick="submitQuestion()" style="margin-top: 10px; padding: 10px 20px;">Send Question</button>
+                </div>
+            `;
+
+            const optionsTextarea = document.getElementById('options');
+            const correctAnswerSelect = document.getElementById('correctAnswer');
+            
+            optionsTextarea.addEventListener('input', updateCorrectAnswerOptions);
+        }
+
+        function updateCorrectAnswerOptions() {
+            const optionsTextarea = document.getElementById('options');
+            const correctAnswerSelect = document.getElementById('correctAnswer');
+            
+            const options = optionsTextarea.value
+                .split('\n')
+                .filter(opt => opt.trim());
+            
+            correctAnswerSelect.innerHTML = '';
+            options.forEach(option => {
+                const optElement = document.createElement('option');
+                optElement.value = option;
+                optElement.textContent = option;
+                correctAnswerSelect.appendChild(optElement);
+            });
+        }
+
+        async function submitQuestion() {
+            const question = document.getElementById('question').value;
+            const options = document.getElementById('options').value
+                .split('\n')
+                .filter(opt => opt.trim());
+            const correctAnswer = document.getElementById('correctAnswer').value;
+            
+            const response = await fetch('/admin/question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    password: adminPassword,
+                    question, 
+                    options, 
+                    correctAnswer 
+                })
+            });
+            
+            if (response.ok) {
+                alert('Question sent successfully!');
+                document.getElementById('question').value = '';
+                document.getElementById('options').value = '';
+                document.getElementById('correctAnswer').innerHTML = '';
+            } else {
+                alert('Error sending question. Please check your admin privileges.');
+            }
+        }
+
+        // Handle Enter key in password field
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifyPassword();
+            }
+        });
+    </script>
+</body>
+</html>

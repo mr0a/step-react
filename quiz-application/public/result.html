@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz Results</title>
+    <style>
+        body { max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; }
+        .results { margin-top: 20px; }
+        .result-bar {
+            margin: 10px 0;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress {
+            padding: 10px;
+            transition: width 0.5s ease;
+        }
+        .progress.correct {
+            background-color: #d4edda;
+        }
+        .progress.incorrect {
+            background-color: #e0e0ff;
+        }
+        .first-correct {
+            color: #28a745;
+            font-weight: bold;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #d4edda;
+            border-radius: 4px;
+        }
+        .leaderboard {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .leaderboard h3 {
+            margin-top: 0;
+        }
+        .leaderboard-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="question-container">
+        <h2 id="question-text"></h2>
+        <div id="options-list"></div>
+    </div>
+    <div id="first-correct" class="first-correct" style="display: none;"></div>
+    <div id="results-container" class="results">
+        <h3>Live Results:</h3>
+    </div>
+    <div id="leaderboard" class="leaderboard">
+        <h3>Top Scorers</h3>
+        <div id="leaderboard-list"></div>
+    </div>
+
+    <script>
+        let ws;
+
+        function connect() {
+            ws = new WebSocket('ws://' + window.location.host);
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'question') {
+                    displayQuestion(data.question);
+                }
+                else if (data.type === 'results') {
+                    displayResults(data.results);
+                }
+            };
+            
+            ws.onclose = () => {
+                setTimeout(connect, 1000);
+            };
+        }
+
+        function displayResults(results) {
+            // Display first correct answer if available
+            const firstCorrectDiv = document.getElementById('first-correct');
+            if (results.firstCorrect) {
+                firstCorrectDiv.textContent = `First correct answer: ${results.firstCorrect}! 🎉`;
+                firstCorrectDiv.style.display = 'block';
+            } else {
+                firstCorrectDiv.style.display = 'none';
+            }
+
+            // Display answer results
+            const container = document.getElementById('results-container');
+            container.innerHTML = '<h3>Live Results:</h3>';
+            
+            Object.entries(results.answers).forEach(([option, data]) => {
+                const resultBar = document.createElement('div');
+                resultBar.className = 'result-bar';
+                
+                const progress = document.createElement('div');
+                progress.className = `progress ${data.isCorrect ? 'correct' : 'incorrect'}`;
+                progress.style.width = `${data.percentage}%`;
+                progress.textContent = `${option}: ${data.count} votes (${data.percentage}%)`;
+                
+                resultBar.appendChild(progress);
+                container.appendChild(resultBar);
+            });
+
+            // Update leaderboard
+            const leaderboardList = document.getElementById('leaderboard-list');
+            leaderboardList.innerHTML = '';
+            results.topScorers.forEach((scorer, index) => {
+                const div = document.createElement('div');
+                div.className = 'leaderboard-item';
+                div.textContent = `${index + 1}. ${scorer.username}: ${scorer.score} points`;
+                leaderboardList.appendChild(div);
+            });
+        }
+
+        // Rest of the results.html script remains the same
+        // ... (previous displayQuestion function)
+
+        connect();
+    </script>
+</body>
+</html>
