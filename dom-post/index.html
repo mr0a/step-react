@@ -38,7 +38,7 @@
         }
 
         .submit-btn {
-            background-color: #4CAF50;
+            background-color: #1877f2;
             color: white;
             padding: 0.75rem 1.5rem;
             border: none;
@@ -63,7 +63,12 @@
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
         }
+
+        /* .post.moving {
+            transform: scale(1.02);
+        } */
 
         .post-content {
             margin-bottom: 1rem;
@@ -80,16 +85,24 @@
             align-items: center;
             gap: 0.5rem;
             font-size: 0.9rem;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
         }
 
         .like-btn:hover {
             background-color: #e0e0e0;
         }
 
-        .like-btn.active {
-            background-color: #e1f5fe;
-            color: #0288d1;
+        .like-count {
+            min-width: 20px;
+            text-align: left;
+        }
+
+        .sort-info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            font-style: italic;
         }
     </style>
 </head>
@@ -102,6 +115,7 @@
         ></textarea>
         <button class="submit-btn">Post</button>
     </div>
+    <div class="sort-info">Posts are automatically sorted by likes</div>
     <div class="posts-container"></div>
 
     <script>
@@ -109,9 +123,23 @@
         const inputBox = document.querySelector('.input-box');
         const submitBtn = document.querySelector('.submit-btn');
         const postsContainer = document.querySelector('.posts-container');
+        
+        // Array to store all posts
+        let posts = [];
 
-        // Add event listener to submit button
-        submitBtn.addEventListener('click', createPost);
+        // Function to sort and render posts
+        function sortAndRenderPosts() {
+            // Sort posts by like count (descending)
+            posts.sort((a, b) => b.likes - a.likes);
+            
+            // Remove all posts from DOM
+            postsContainer.innerHTML = '';
+            
+            // Render sorted posts
+            posts.forEach(post => {
+                postsContainer.appendChild(post.element);
+            });
+        }
 
         // Function to create a new post
         function createPost() {
@@ -139,27 +167,42 @@
                 <span class="like-count">0</span>
             `;
             
+            // Create post object
+            const postObj = {
+                element: post,
+                likes: 0,
+                content: content
+            };
+            
             // Add like functionality
-            let isLiked = false;
-            let likeCount = 0;
             likeBtn.addEventListener('click', () => {
-                likeCount++;
-                likeBtn.querySelector('.like-count').textContent = likeCount;
-                if(likeCount > 0) {
-                    likeBtn.classList.add('active');
-                }
+                postObj.likes++;
+                likeBtn.querySelector('.like-count').textContent = postObj.likes;
+                
+                // Add moving class for animation
+                // post.classList.add('moving');
+                
+                // Sort and render after a short delay
+                setTimeout(() => {
+                    // post.classList.remove('moving');
+                    sortAndRenderPosts();
+                }, 300);
             });
 
             // Append elements to post
             post.appendChild(postContent);
             post.appendChild(likeBtn);
             
-            // Add post to container
-            postsContainer.insertBefore(post, postsContainer.firstChild);
+            // Add post to array and render
+            posts.push(postObj);
+            sortAndRenderPosts();
             
             // Clear input
             inputBox.value = '';
         }
+
+        // Add event listener to submit button
+        submitBtn.addEventListener('click', createPost);
 
         // Add enter key support (Shift + Enter for new line)
         inputBox.addEventListener('keydown', (e) => {
