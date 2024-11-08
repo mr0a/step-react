@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Todo List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .todo-container {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 5px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.5rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            margin-bottom: 0.5rem;
+            border-radius: 3px;
+        }
+
+        .todo-item.completed {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .delete-btn {
+            background: #ff4444;
+            margin-left: auto;
+        }
+    </style>
+    <!-- React CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        const { useState } = React;
+
+        // TodoItem Component
+        function TodoItem({ todo, onToggle, onDelete }) {
+            return React.createElement('div',
+                {
+                    className: `todo-item ${todo.completed ? 'completed' : ''}`,
+                },
+                [
+                    React.createElement('input', {
+                        key: 'checkbox',
+                        type: 'checkbox',
+                        checked: todo.completed,
+                        onChange: () => onToggle(todo.id)
+                    }),
+                    React.createElement('span', {
+                        key: 'text'
+                    }, todo.text),
+                    React.createElement('button', {
+                        key: 'delete',
+                        className: 'delete-btn',
+                        onClick: () => onDelete(todo.id)
+                    }, 'Delete')
+                ]
+            );
+        }
+
+        // TodoApp Component
+        function TodoApp() {
+            const [todos, setTodos] = useState([]);
+            const [inputValue, setInputValue] = useState('');
+
+            const addTodo = () => {
+                if (inputValue.trim() === '') return;
+                
+                const newTodo = {
+                    id: Date.now(),
+                    text: inputValue,
+                    completed: false
+                };
+
+                setTodos([...todos, newTodo]);
+                setInputValue('');
+            };
+
+            const toggleTodo = (id) => {
+                setTodos(todos.map(todo => 
+                    todo.id === id 
+                        ? { ...todo, completed: !todo.completed }
+                        : todo
+                ));
+            };
+
+            const deleteTodo = (id) => {
+                setTodos(todos.filter(todo => todo.id !== id));
+            };
+
+            const handleKeyPress = (event) => {
+                if (event.key === 'Enter') {
+                    addTodo();
+                }
+            };
+
+            return React.createElement('div', 
+                { className: 'todo-container' },
+                [
+                    React.createElement('h1', 
+                        { key: 'title' }, 
+                        'React Todo List'
+                    ),
+                    React.createElement('div', 
+                        { 
+                            key: 'input-group', 
+                            className: 'input-group' 
+                        },
+                        [
+                            React.createElement('input', {
+                                key: 'input',
+                                type: 'text',
+                                value: inputValue,
+                                onChange: (e) => setInputValue(e.target.value),
+                                onKeyPress: handleKeyPress,
+                                placeholder: 'Add a new todo'
+                            }),
+                            React.createElement('button', {
+                                key: 'add-button',
+                                onClick: addTodo
+                            }, 'Add')
+                        ]
+                    ),
+                    React.createElement('div',
+                        { key: 'todo-list' },
+                        todos.map(todo =>
+                            React.createElement(TodoItem, {
+                                key: todo.id,
+                                todo: todo,
+                                onToggle: toggleTodo,
+                                onDelete: deleteTodo
+                            })
+                        )
+                    )
+                ]
+            );
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(TodoApp));
+    </script>
+</body>
+</html>
