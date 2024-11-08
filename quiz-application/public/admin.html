@@ -1,4 +1,3 @@
-<!-- public/admin-login.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,7 +5,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 400px;
+            max-width: 800px;
             margin: 40px auto;
             padding: 20px;
         }
@@ -15,6 +14,8 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 0 auto;
         }
         .form-group {
             margin-bottom: 15px;
@@ -24,7 +25,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="password"] {
+        input[type="password"], textarea, select {
             width: 100%;
             padding: 8px;
             border: 1px solid #ddd;
@@ -38,7 +39,6 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            width: 100%;
         }
         button:hover {
             background-color: #0056b3;
@@ -47,6 +47,59 @@
             color: #dc3545;
             margin-top: 10px;
             display: none;
+        }
+        .questions-list {
+            margin-top: 30px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+        .question-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .question-item:hover {
+            background-color: #e9ecef;
+        }
+        .question-item h3 {
+            margin: 0 0 10px 0;
+            color: #007bff;
+        }
+        .button-group {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .button-group button {
+            flex: 1;
+        }
+        .question-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .options-list {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .correct-answer {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
         }
     </style>
 </head>
@@ -63,57 +116,142 @@
 
     <script>
         let adminPassword = '';
-
-        async function verifyPassword() {
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('error-message');
+        
+        function loadStoredQuestions() {
+            const questions = JSON.parse(localStorage.getItem('quizQuestions') || '[]');
+            const questionsList = document.getElementById('stored-questions');
+            questionsList.innerHTML = '';
             
-            try {
-                const response = await fetch('/admin/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
+            questions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-item';
                 
-                const data = await response.json();
+                const content = `
+                    <h3>Question ${index + 1}</h3>
+                    <div>${q.question}</div>
+                    <div class="options-list">
+                        ${q.options.map(opt => `
+                            <div>${opt === q.correctAnswer ? 
+                                `<span class="correct-answer">✓ ${opt}</span>` : 
+                                opt}
+                            </div>`).join('')}
+                    </div>
+                    <div class="question-meta">
+                        Created: ${q.timestamp || 'Unknown date'}
+                    </div>
+                    <div class="action-buttons">
+                        <button onclick="loadQuestion(${index})">Edit/Send</button>
+                        <button class="delete-btn" onclick="deleteQuestion(${index})">Delete</button>
+                    </div>
+                `;
                 
-                if (data.success) {
-                    adminPassword = password;
-                    loadAdminInterface();
-                } else {
-                    errorMessage.textContent = 'Invalid password';
-                    errorMessage.style.display = 'block';
-                }
-            } catch (error) {
-                errorMessage.textContent = 'An error occurred. Please try again.';
-                errorMessage.style.display = 'block';
+                questionDiv.innerHTML = content;
+                questionsList.appendChild(questionDiv);
+            });
+        }
+
+        function saveQuestion(question, options, correctAnswer, send = false) {
+            const questions = JSON.parse(localStorage.getItem('quizQuestions') || '[]');
+            const newQuestion = {
+                question,
+                options,
+                correctAnswer,
+                timestamp: new Date().toLocaleString()
+            };
+            
+            if (document.getElementById('editing-index').value !== '') {
+                // Update existing question
+                const index = parseInt(document.getElementById('editing-index').value);
+                questions[index] = newQuestion;
+            } else {
+                // Add new question
+                questions.push(newQuestion);
             }
+            
+            localStorage.setItem('quizQuestions', JSON.stringify(questions));
+            loadStoredQuestions();
+            
+            if (send) {
+                return submitQuestion();
+            }
+            clearForm();
+        }
+
+        function loadQuestion(index) {
+            const questions = JSON.parse(localStorage.getItem('quizQuestions') || '[]');
+            const question = questions[index];
+            
+            document.getElementById('question').value = question.question;
+            document.getElementById('options').value = question.options.join('\n');
+            document.getElementById('editing-index').value = index;
+            
+            // Update correct answer options and select the saved correct answer
+            updateCorrectAnswerOptions();
+            document.getElementById('correctAnswer').value = question.correctAnswer;
+        }
+
+        function deleteQuestion(index) {
+            if (confirm('Are you sure you want to delete this question?')) {
+                const questions = JSON.parse(localStorage.getItem('quizQuestions') || '[]');
+                questions.splice(index, 1);
+                localStorage.setItem('quizQuestions', JSON.stringify(questions));
+                loadStoredQuestions();
+                clearForm();
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('question').value = '';
+            document.getElementById('options').value = '';
+            document.getElementById('correctAnswer').innerHTML = '';
+            document.getElementById('editing-index').value = '';
         }
 
         function loadAdminInterface() {
             document.body.innerHTML = `
-                <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+                <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
                     <h1>Quiz Admin Panel</h1>
+                    <input type="hidden" id="editing-index" value="">
                     <div class="form-group">
                         <label>Question:</label><br>
-                        <textarea id="question" rows="3" style="width: 100%; margin-top: 5px;"></textarea>
+                        <textarea id="question" rows="3"></textarea>
                     </div>
                     <div class="form-group">
                         <label>Options (one per line):</label><br>
-                        <textarea id="options" rows="4" style="width: 100%; margin-top: 5px;"></textarea>
+                        <textarea id="options" rows="4"></textarea>
                     </div>
                     <div class="form-group">
                         <label>Correct Answer:</label><br>
-                        <select id="correctAnswer" style="width: 100%; margin-top: 5px;"></select>
+                        <select id="correctAnswer"></select>
                     </div>
-                    <button onclick="submitQuestion()" style="margin-top: 10px; padding: 10px 20px;">Send Question</button>
+                    <div class="button-group">
+                        <button onclick="saveQuestion(
+                            document.getElementById('question').value,
+                            document.getElementById('options').value.split('\\n').filter(opt => opt.trim()),
+                            document.getElementById('correctAnswer').value,
+                            false
+                        )">Save Question</button>
+                        <button onclick="saveQuestion(
+                            document.getElementById('question').value,
+                            document.getElementById('options').value.split('\\n').filter(opt => opt.trim()),
+                            document.getElementById('correctAnswer').value,
+                            true
+                        )">Save & Send Question</button>
+                        <button onclick="clearForm()">Clear Form</button>
+                    </div>
+                    
+                    <div class="questions-list">
+                        <h2>Stored Questions</h2>
+                        <div id="stored-questions"></div>
+                    </div>
                 </div>
             `;
 
             const optionsTextarea = document.getElementById('options');
-            const correctAnswerSelect = document.getElementById('correctAnswer');
-            
             optionsTextarea.addEventListener('input', updateCorrectAnswerOptions);
+            
+            // Load stored questions
+            loadStoredQuestions();
         }
 
         function updateCorrectAnswerOptions() {
@@ -140,24 +278,54 @@
                 .filter(opt => opt.trim());
             const correctAnswer = document.getElementById('correctAnswer').value;
             
-            const response = await fetch('/admin/question', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    password: adminPassword,
-                    question, 
-                    options, 
-                    correctAnswer 
-                })
-            });
+            try {
+                const response = await fetch('/admin/question', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        password: adminPassword,
+                        question, 
+                        options, 
+                        correctAnswer 
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Question sent successfully!');
+                    return true;
+                } else {
+                    alert('Error sending question. Please check your admin privileges.');
+                    return false;
+                }
+            } catch (error) {
+                alert('Error sending question: ' + error.message);
+                return false;
+            }
+        }
+
+        async function verifyPassword() {
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
             
-            if (response.ok) {
-                alert('Question sent successfully!');
-                document.getElementById('question').value = '';
-                document.getElementById('options').value = '';
-                document.getElementById('correctAnswer').innerHTML = '';
-            } else {
-                alert('Error sending question. Please check your admin privileges.');
+            try {
+                const response = await fetch('/admin/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    adminPassword = password;
+                    loadAdminInterface();
+                } else {
+                    errorMessage.textContent = 'Invalid password';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.style.display = 'block';
             }
         }
 
