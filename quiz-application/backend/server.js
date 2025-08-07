@@ -3,6 +3,7 @@ const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const path = require("path");
+require("dotenv").config();
 
 // Import services and routes
 const QuizService = require("./services/quizService");
